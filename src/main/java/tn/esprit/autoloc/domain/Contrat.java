@@ -19,4 +19,10 @@ public class Contrat {
     private LocalDate dateSignature;
     private BigDecimal montantTotal;
     private boolean valide;
+    @OneToOne
+    @JoinColumn(name = "reservation_id", unique = true)
+    private Reservation reservation;
+
+    @OneToOne(mappedBy = "contrat")
+    private Paiement paiement;
 }

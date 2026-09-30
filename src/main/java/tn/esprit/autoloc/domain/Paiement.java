@@ -21,4 +21,7 @@ public class Paiement {
 
     @Enumerated(EnumType.STRING)
     private ModePaiement modePaiement;
+    @OneToOne
+    @JoinColumn(name = "contrat_id", unique = true)
+    private Contrat contrat;
 }
