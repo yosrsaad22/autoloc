@@ -1,42 +1,54 @@
 package tn.esprit.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import tn.esprit.autoloc.domain.enums.CategorieVehicule;
 import tn.esprit.autoloc.domain.enums.StatutVehicule;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
 @Entity
 @Table(name = "vehicule")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Vehicule{
+@Builder
+public class Vehicule {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idVehicule;
+
     private String immatriculation;
     private String marque;
     private String modele;
+
+    @Enumerated(EnumType.STRING)
     private CategorieVehicule categorie;
+
     private BigDecimal tarifJournalier;
+
+    @Enumerated(EnumType.STRING)
     private StatutVehicule statut;
+
     @ManyToOne
     @JoinColumn(name = "agence_id")
     private Agence agence;
 
     // Un véhicule peut avoir plusieurs réservations
     @OneToMany(mappedBy = "vehicule")
+    @JsonIgnore
+    @Builder.Default
     private List<Reservation> reservations = new ArrayList<>();
 
     // Un véhicule peut avoir plusieurs maintenances
     @OneToMany(mappedBy = "vehicule")
+    @JsonIgnore
+    @Builder.Default
     private List<Maintenance> maintenances = new ArrayList<>();
 
     // Plusieurs véhicules peuvent avoir plusieurs équipements
@@ -46,5 +58,15 @@ public class Vehicule{
             joinColumns = @JoinColumn(name = "vehicule_id"),
             inverseJoinColumns = @JoinColumn(name = "equipement_id")
     )
+    @JsonIgnore
+    @Builder.Default
     private List<Equipement> equipements = new ArrayList<>();
+
+    public Long getId() {
+        return this.idVehicule;
+    }
+
+    public void setId(Long id) {
+        this.idVehicule = id;
+    }
 }

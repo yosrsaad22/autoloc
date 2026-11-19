@@ -1,73 +1,113 @@
 package tn.esprit.autoloc.service.impl;
 
-import java.util.List;
-import java.math.BigDecimal;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.autoloc.domain.Contrat;
+import tn.esprit.autoloc.domain.Paiement;
+import tn.esprit.autoloc.domain.Reservation;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IContratRepository;
+import tn.esprit.autoloc.repository.IPaiementRepository;
+import tn.esprit.autoloc.repository.IReservationRepository;
 import tn.esprit.autoloc.service.IContratService;
+import tn.esprit.autoloc.web.dto.ContratDTO;
+import tn.esprit.autoloc.web.dto.PaiementDTO;
+import tn.esprit.autoloc.web.mapper.ContratMapper;
+import tn.esprit.autoloc.web.mapper.PaiementMapper;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ContratServiceImpl implements IContratService {
 
     private final IContratRepository contratRepository;
+    private final IPaiementRepository paiementRepository;
+    private final IReservationRepository reservationRepository;
+    private final ContratMapper contratMapper;
+    private final PaiementMapper paiementMapper;
 
     @Override
-    public Contrat create(Contrat contrat) {
-
-        if (contrat.getIdContrat() != null) {
+    public ContratDTO create(ContratDTO dto) {
+        if (dto.getId() != null) {
             throw new IllegalArgumentException(
                     "Un nouveau contrat ne doit pas avoir d'identifiant");
         }
+        verifierMontant(dto.getMontantTotal());
 
-        verifierMontant(contrat);
-        return contratRepository.save(contrat);
+        Contrat contrat = contratMapper.toEntity(dto);
+        if (dto.getReservationId() != null) {
+            contrat.setReservation(trouverReservation(dto.getReservationId()));
+        }
+        return contratMapper.toDto(contratRepository.save(contrat));
     }
 
     @Override
-    public Contrat findById(Long id) {
-        return contratRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Contrat", id));
+    @Transactional(readOnly = true)
+    public ContratDTO findById(Long id) {
+        return contratMapper.toDto(trouverContrat(id));
     }
 
     @Override
-    public List<Contrat> findAll() {
-        return contratRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<ContratDTO> findAll() {
+        return contratRepository.findAll().stream()
+                .map(contratMapper::toDto)
+                .toList();
     }
 
     @Override
-    public Contrat update(Long id, Contrat contrat) {
+    public ContratDTO update(Long id, ContratDTO dto) {
+        verifierMontant(dto.getMontantTotal());
 
-        verifierMontant(contrat);
-
-        Contrat existant = findById(id);
-
-        existant.setMontantTotal(contrat.getMontantTotal());
-        existant.setDateSignature(contrat.getDateSignature());
-        existant.setValide(contrat.isValide());
-
-        return contratRepository.save(existant);
+        Contrat existant = trouverContrat(id);
+        existant.setMontantTotal(dto.getMontantTotal());
+        existant.setDateSignature(dto.getDateSignature());
+        existant.setValide(dto.isValide());
+        if (dto.getReservationId() != null) {
+            existant.setReservation(trouverReservation(dto.getReservationId()));
+        }
+        return contratMapper.toDto(contratRepository.save(existant));
     }
 
     @Override
     public void deleteById(Long id) {
-
         if (!contratRepository.existsById(id)) {
             throw new ResourceNotFoundException("Contrat", id);
         }
-
         contratRepository.deleteById(id);
     }
 
-    private void verifierMontant(Contrat contrat) {
-        BigDecimal montant = contrat.getMontantTotal();
+    @Override
+    public PaiementDTO ajouterPaiement(Long idContrat, PaiementDTO paiementDto) {
+        Contrat contrat = trouverContrat(idContrat);
+        if (contrat.getPaiement() != null) {
+            throw new IllegalArgumentException(
+                    "Ce contrat possède déjà un paiement");
+        }
 
+        Paiement paiement = paiementMapper.toEntity(paiementDto);
+        paiement.setIdPaiement(null);
+        paiement.setContrat(contrat);
+        Paiement sauvegarde = paiementRepository.save(paiement);
+        contrat.setPaiement(sauvegarde);
+        return paiementMapper.toDto(sauvegarde);
+    }
+
+    private Contrat trouverContrat(Long id) {
+        return contratRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contrat", id));
+    }
+
+    private Reservation trouverReservation(Long id) {
+        return reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation", id));
+    }
+
+    private void verifierMontant(BigDecimal montant) {
         if (montant != null && montant.signum() < 0) {
             throw new IllegalArgumentException(
                     "Le montant total ne peut pas être négatif");

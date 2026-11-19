@@ -1,5 +1,7 @@
 package tn.esprit.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -21,8 +23,13 @@ public class Contrat {
     private boolean valide;
     @OneToOne
     @JoinColumn(name = "reservation_id", unique = true)
+    @JsonIgnore
     private Reservation reservation;
 
-    @OneToOne(mappedBy = "contrat")
+    @OneToOne(
+            mappedBy = "contrat",
+            cascade = CascadeType.ALL
+    )
+    @JsonManagedReference("contrat-paiement")
     private Paiement paiement;
 }

@@ -1,5 +1,6 @@
 package tn.esprit.autoloc.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Client {
 
     @Id
@@ -25,5 +27,15 @@ public class Client {
     private LocalDate dateInscription;
 
     @OneToMany(mappedBy = "client")
+    @JsonIgnore
+    @Builder.Default
     private List<Reservation> reservations = new ArrayList<>();
+
+    public Long getId() {
+        return this.idClient;
+    }
+
+    public void setId(Long id) {
+        this.idClient = id;
+    }
 }
